@@ -8,552 +8,446 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
-if CoreGui:FindFirstChild("QUWY_AMOLED") then
-    CoreGui.QUWY_AMOLED:Destroy()
+if CoreGui:FindFirstChild("QUWY_MINIMAL") then
+    CoreGui.QUWY_MINIMAL:Destroy()
 end
 
-local Colors = {
-    Black = Color3.fromRGB(5, 5, 5),
-    DarkGray = Color3.fromRGB(15, 15, 15),
-    Purple = Color3.fromRGB(160, 80, 255),
-    Text = Color3.fromRGB(255, 255, 255),
-    SubText = Color3.fromRGB(150, 150, 150),
-    Red = Color3.fromRGB(255, 60, 60),
-    Success = Color3.fromRGB(60, 255, 120)
+local Theme = {
+    Background = Color3.fromRGB(12, 12, 12),
+    Element = Color3.fromRGB(20, 20, 20),
+    Accent = Color3.fromRGB(150, 80, 255),
+    Text = Color3.fromRGB(240, 240, 240),
+    SubText = Color3.fromRGB(120, 120, 120),
+    Red = Color3.fromRGB(255, 70, 70),
+    Green = Color3.fromRGB(70, 255, 120)
 }
 
-local Flying = false
-local FlySpeed = 20
-local Noclip = false
-local InfJump = false
-local CtrlTP = false
-local FullbrightEnabled = false
+local State = {
+    Flying = false,
+    FlySpeed = 20,
+    Noclip = false,
+    InfJump = false,
+    CtrlTP = false,
+    Fullbright = false
+}
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "QUWY_AMOLED"
+ScreenGui.Name = "QUWY_MINIMAL"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local NotifContainer = Instance.new("Frame")
 NotifContainer.Parent = ScreenGui
 NotifContainer.BackgroundTransparency = 1
-NotifContainer.Position = UDim2.new(0.5, -100, 0.85, 0)
-NotifContainer.Size = UDim2.new(0, 200, 0, 50)
-NotifContainer.ZIndex = 100
+NotifContainer.Position = UDim2.new(0.5, -100, 0.9, 0)
+NotifContainer.Size = UDim2.new(0, 200, 0, 40)
+NotifContainer.ZIndex = 200
 
-local function ShowNotification(text)
-    local NotifFrame = Instance.new("Frame")
-    NotifFrame.Parent = NotifContainer
-    NotifFrame.BackgroundColor3 = Colors.DarkGray
-    NotifFrame.Size = UDim2.new(0, 0, 0, 35)
-    NotifFrame.Position = UDim2.new(0.5, 0, 0, 0)
-    NotifFrame.AnchorPoint = Vector2.new(0.5, 0)
-    NotifFrame.BorderSizePixel = 0
-    NotifFrame.ClipsDescendants = true
+local function Notify(text)
+    local F = Instance.new("Frame")
+    F.Parent = NotifContainer
+    F.BackgroundColor3 = Theme.Element
+    F.Size = UDim2.new(0, 0, 0, 30)
+    F.Position = UDim2.new(0.5, 0, 0, 0)
+    F.AnchorPoint = Vector2.new(0.5, 0)
+    F.BorderSizePixel = 0
     
-    local NC = Instance.new("UICorner", NotifFrame)
-    NC.CornerRadius = UDim.new(1, 0)
+    local C = Instance.new("UICorner", F)
+    C.CornerRadius = UDim.new(0, 6)
     
-    local NS = Instance.new("UIStroke", NotifFrame)
-    NS.Color = Colors.Purple
-    NS.Thickness = 1
+    local S = Instance.new("UIStroke", F)
+    S.Color = Theme.Accent
+    S.Thickness = 1
     
-    local NL = Instance.new("TextLabel", NotifFrame)
-    NL.BackgroundTransparency = 1
-    NL.Size = UDim2.new(1, 0, 1, 0)
-    NL.Font = Enum.Font.GothamBold
-    NL.TextColor3 = Colors.Text
-    NL.TextSize = 14
-    NL.Text = text
-    NL.TextTransparency = 1
+    local L = Instance.new("TextLabel", F)
+    L.BackgroundTransparency = 1
+    L.Size = UDim2.new(1, 0, 1, 0)
+    L.Font = Enum.Font.GothamMedium
+    L.Text = text
+    L.TextColor3 = Theme.Text
+    L.TextSize = 12
+    L.TextTransparency = 1
     
-    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 200, 0, 35)}):Play()
+    TweenService:Create(F, TweenInfo.new(0.3), {Size = UDim2.new(0, 180, 0, 30)}):Play()
     wait(0.1)
-    TweenService:Create(NL, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+    TweenService:Create(L, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
     wait(2)
-    TweenService:Create(NL, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
-    local out = TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 35)})
+    TweenService:Create(L, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+    local out = TweenService:Create(F, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 30)})
     out:Play()
     out.Completed:Wait()
-    NotifFrame:Destroy()
+    F:Destroy()
 end
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Colors.Black
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
-MainFrame.Size = UDim2.new(0, 500, 0, 400)
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Parent = ScreenGui
+Main.BackgroundColor3 = Theme.Background
+Main.Position = UDim2.new(0.5, -240, 0.5, -160)
+Main.Size = UDim2.new(0, 480, 0, 320)
+Main.BorderSizePixel = 0
 
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 12)
+local MainCorner = Instance.new("UICorner", Main)
+MainCorner.CornerRadius = UDim.new(0, 8)
 
-local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Color = Colors.Purple
-MainStroke.Thickness = 1.5
-MainStroke.Transparency = 0.2
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Color = Theme.Element
+MainStroke.Thickness = 1
 
 local TopBar = Instance.new("Frame")
-TopBar.Parent = MainFrame
-TopBar.BackgroundColor3 = Colors.DarkGray
+TopBar.Parent = Main
+TopBar.BackgroundTransparency = 1
 TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel")
 Title.Parent = TopBar
 Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.Size = UDim2.new(0, 200, 1, 0)
-Title.Font = Enum.Font.GothamBlack
-Title.Text = "QUWY <font color=\"rgb(160,80,255)\">AMOLED</font>"
-Title.RichText = true
-Title.TextColor3 = Colors.Text
-Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.Text = "QUWY"
+Title.TextColor3 = Theme.Text
+Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local Divider = Instance.new("Frame")
+Divider.Parent = TopBar
+Divider.BackgroundColor3 = Theme.Element
+Divider.BorderSizePixel = 0
+Divider.Position = UDim2.new(0, 0, 1, -1)
+Divider.Size = UDim2.new(1, 0, 0, 1)
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Parent = TopBar
 CloseBtn.BackgroundTransparency = 1
-CloseBtn.Position = UDim2.new(1, -40, 0, 0)
-CloseBtn.Size = UDim2.new(0, 40, 1, 0)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Colors.Red
-CloseBtn.TextSize = 18
+CloseBtn.Position = UDim2.new(1, -30, 0, 0)
+CloseBtn.Size = UDim2.new(0, 30, 1, 0)
+CloseBtn.Font = Enum.Font.GothamMedium
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Theme.SubText
+CloseBtn.TextSize = 20
 
 local MinBtn = Instance.new("TextButton")
 MinBtn.Parent = TopBar
 MinBtn.BackgroundTransparency = 1
-MinBtn.Position = UDim2.new(1, -80, 0, 0)
-MinBtn.Size = UDim2.new(0, 40, 1, 0)
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.Text = "—"
-MinBtn.TextColor3 = Colors.Text
-MinBtn.TextSize = 18
+MinBtn.Position = UDim2.new(1, -60, 0, 0)
+MinBtn.Size = UDim2.new(0, 30, 1, 0)
+MinBtn.Font = Enum.Font.GothamMedium
+MinBtn.Text = "−"
+MinBtn.TextColor3 = Theme.SubText
+MinBtn.TextSize = 20
 
 local Sidebar = Instance.new("Frame")
-Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Colors.DarkGray
+Sidebar.Parent = Main
+Sidebar.BackgroundTransparency = 1
 Sidebar.Position = UDim2.new(0, 0, 0, 40)
-Sidebar.Size = UDim2.new(0, 130, 1, -40)
-Sidebar.BorderSizePixel = 0
+Sidebar.Size = UDim2.new(0, 120, 1, -40)
 
-local TabHolder = Instance.new("Frame")
-TabHolder.Parent = Sidebar
-TabHolder.BackgroundTransparency = 1
-TabHolder.Size = UDim2.new(1, 0, 1, 0)
+local SideList = Instance.new("UIListLayout", Sidebar)
+SideList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SideList.SortOrder = Enum.SortOrder.LayoutOrder
+SideList.Padding = UDim.new(0, 5)
 
-local UIList = Instance.new("UIListLayout", TabHolder)
-UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIList.Padding = UDim.new(0, 8)
-local UIPad = Instance.new("UIPadding", TabHolder)
-UIPad.PaddingTop = UDim.new(0, 15)
+local SidePad = Instance.new("UIPadding", Sidebar)
+SidePad.PaddingTop = UDim.new(0, 15)
 
 local PageContainer = Instance.new("Frame")
-PageContainer.Parent = MainFrame
+PageContainer.Parent = Main
 PageContainer.BackgroundTransparency = 1
-PageContainer.Position = UDim2.new(0, 130, 0, 40)
-PageContainer.Size = UDim2.new(1, -130, 1, -40)
+PageContainer.Position = UDim2.new(0, 120, 0, 40)
+PageContainer.Size = UDim2.new(1, -120, 1, -40)
 
-local function CreateTab(name)
-    local Btn = Instance.new("TextButton")
-    Btn.Parent = TabHolder
-    Btn.BackgroundColor3 = Colors.Black
-    Btn.Size = UDim2.new(0, 110, 0, 35)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Text = name
-    Btn.TextColor3 = Colors.SubText
-    Btn.TextSize = 14
-    local C = Instance.new("UICorner", Btn)
-    C.CornerRadius = UDim.new(0, 8)
-    return Btn
-end
-
-local function CreatePage(name, isScrolling)
-    local P
-    if isScrolling then
-        P = Instance.new("ScrollingFrame")
-        P.ScrollBarThickness = 4
-        P.ScrollBarImageColor3 = Colors.Purple
-        P.CanvasSize = UDim2.new(0, 0, 1.5, 0)
-    else
-        P = Instance.new("Frame")
-    end
-    P.Name = name
-    P.Parent = PageContainer
-    P.Size = UDim2.new(1, 0, 1, 0)
-    P.BackgroundTransparency = 1
-    P.Visible = false
-    return P
-end
-
-local Tab1 = CreateTab("General")
-local Tab2 = CreateTab("About")
-local Page1 = CreatePage("General", true)
-local Page2 = CreatePage("About", false)
-
-Page1.Visible = true
-Tab1.TextColor3 = Colors.Text
-Tab1.BackgroundColor3 = Colors.Purple
-
-local function CreateFeatureBtn(text, parent, pos)
+local function CreateTabBtn(text)
     local B = Instance.new("TextButton")
-    B.Parent = parent
-    B.BackgroundColor3 = Colors.DarkGray
-    B.Position = pos
-    B.Size = UDim2.new(0, 160, 0, 45)
-    B.Font = Enum.Font.GothamBold
+    B.Parent = Sidebar
+    B.BackgroundColor3 = Theme.Background
+    B.Size = UDim2.new(0, 100, 0, 30)
+    B.Font = Enum.Font.GothamMedium
     B.Text = text
-    B.TextColor3 = Colors.Text
-    B.TextSize = 14
+    B.TextColor3 = Theme.SubText
+    B.TextSize = 13
+    
     local C = Instance.new("UICorner", B)
-    C.CornerRadius = UDim.new(0, 8)
-    local S = Instance.new("UIStroke", B)
-    S.Color = Colors.Purple
-    S.Thickness = 1
-    S.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    return B, S
+    C.CornerRadius = UDim.new(0, 4)
+    
+    return B
 end
 
-local FlyBtn, FlyStroke = CreateFeatureBtn("ENABLE FLY", Page1, UDim2.new(0, 20, 0, 20))
+local Tab1 = CreateTabBtn("Features")
+local Tab2 = CreateTabBtn("Settings")
+local Tab3 = CreateTabBtn("Info")
 
-local SpeedBox = Instance.new("TextBox")
-SpeedBox.Parent = Page1
-SpeedBox.BackgroundColor3 = Colors.DarkGray
-SpeedBox.Position = UDim2.new(0, 190, 0, 20)
-SpeedBox.Size = UDim2.new(0, 140, 0, 45)
-SpeedBox.Font = Enum.Font.GothamMedium
-SpeedBox.Text = "Fly Speed: " .. FlySpeed
-SpeedBox.TextColor3 = Colors.Purple
-SpeedBox.TextSize = 14
-SpeedBox.PlaceholderText = "Speed"
-local SBC = Instance.new("UICorner", SpeedBox)
-SBC.CornerRadius = UDim.new(0, 8)
-SpeedBox.FocusLost:Connect(function()
-    local n = tonumber(string.match(SpeedBox.Text, "%d+"))
-    if n then FlySpeed = n; SpeedBox.Text = "Fly Speed: " .. n else SpeedBox.Text = "Fly Speed: " .. FlySpeed end
-end)
+local Page1 = Instance.new("Frame", PageContainer); Page1.Size = UDim2.new(1,0,1,0); Page1.BackgroundTransparency = 1
+local Page2 = Instance.new("Frame", PageContainer); Page2.Size = UDim2.new(1,0,1,0); Page2.BackgroundTransparency = 1; Page2.Visible = false
+local Page3 = Instance.new("Frame", PageContainer); Page3.Size = UDim2.new(1,0,1,0); Page3.BackgroundTransparency = 1; Page3.Visible = false
 
-local NoclipBtn, NoclipStroke = CreateFeatureBtn("NOCLIP: OFF", Page1, UDim2.new(0, 20, 0, 80))
-
-local InfJumpBtn, InfJumpStroke = CreateFeatureBtn("INF JUMP: OFF", Page1, UDim2.new(0, 190, 0, 80))
-
-local FullbrightBtn, FBStroke = CreateFeatureBtn("FULLBRIGHT: OFF", Page1, UDim2.new(0, 20, 0, 140))
-
-local CtrlTpBtn, TPStroke = CreateFeatureBtn("CTRL TP: OFF", Page1, UDim2.new(0, 190, 0, 140))
-
-local WSContainer = Instance.new("Frame")
-WSContainer.Parent = Page1
-WSContainer.BackgroundColor3 = Colors.DarkGray
-WSContainer.Position = UDim2.new(0, 20, 0, 210)
-WSContainer.Size = UDim2.new(0, 310, 0, 40)
-local WSC = Instance.new("UICorner", WSContainer)
-WSC.CornerRadius = UDim.new(0, 8)
-local WSInput = Instance.new("TextBox")
-WSInput.Parent = WSContainer
-WSInput.BackgroundTransparency = 1
-WSInput.Size = UDim2.new(1, 0, 1, 0)
-WSInput.Font = Enum.Font.GothamBold
-WSInput.Text = "WalkSpeed (Default 16)"
-WSInput.TextColor3 = Colors.Purple
-WSInput.TextSize = 14
-WSInput.FocusLost:Connect(function()
-    local s = tonumber(WSInput.Text)
-    if s and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = s
-        ShowNotification("Speed: " .. s)
-    end
-end)
-
-local JPContainer = Instance.new("Frame")
-JPContainer.Parent = Page1
-JPContainer.BackgroundColor3 = Colors.DarkGray
-JPContainer.Position = UDim2.new(0, 20, 0, 260)
-JPContainer.Size = UDim2.new(0, 310, 0, 40)
-local JPC = Instance.new("UICorner", JPContainer)
-JPC.CornerRadius = UDim.new(0, 8)
-local JPInput = Instance.new("TextBox")
-JPInput.Parent = JPContainer
-JPInput.BackgroundTransparency = 1
-JPInput.Size = UDim2.new(1, 0, 1, 0)
-JPInput.Font = Enum.Font.GothamBold
-JPInput.Text = "JumpPower (Default 50)"
-JPInput.TextColor3 = Colors.Purple
-JPInput.TextSize = 14
-JPInput.FocusLost:Connect(function()
-    local s = tonumber(JPInput.Text)
-    if s and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.UseJumpPower = true
-        LocalPlayer.Character.Humanoid.JumpPower = s
-        ShowNotification("Jump: " .. s)
-    end
-end)
-
-local AboutTitle = Instance.new("TextLabel")
-AboutTitle.Parent = Page2
-AboutTitle.BackgroundTransparency = 1
-AboutTitle.Size = UDim2.new(1, 0, 0.3, 0)
-AboutTitle.Font = Enum.Font.FredokaOne
-AboutTitle.Text = "QUWY"
-AboutTitle.TextColor3 = Colors.Purple
-AboutTitle.TextSize = 48
-
-local SubTitle = Instance.new("TextLabel")
-SubTitle.Parent = Page2
-SubTitle.BackgroundTransparency = 1
-SubTitle.Position = UDim2.new(0, 0, 0.25, 0)
-SubTitle.Size = UDim2.new(1, 0, 0, 20)
-SubTitle.Font = Enum.Font.Gotham
-SubTitle.Text = "pls follow 😭"
-SubTitle.TextColor3 = Colors.SubText
-SubTitle.TextSize = 14
-
-local function CreateLinkBtn(text, url, yPos)
-    local Btn = Instance.new("TextButton")
-    Btn.Parent = Page2
-    Btn.BackgroundColor3 = Colors.DarkGray
-    Btn.Position = UDim2.new(0.5, -100, 0.45, yPos)
-    Btn.Size = UDim2.new(0, 200, 0, 40)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Text = text
-    Btn.TextColor3 = Colors.Text
-    Btn.TextSize = 14
-    local C = Instance.new("UICorner", Btn)
-    C.CornerRadius = UDim.new(0, 20)
-    local S = Instance.new("UIStroke", Btn)
-    S.Color = Colors.Purple
-    S.Thickness = 1
-    S.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    Btn.MouseButton1Click:Connect(function()
-        if setclipboard then setclipboard(url); ShowNotification("Link Copied!") else ShowNotification("No Copy Support :(") end
-    end)
+local function SwitchTab(btn, page)
+    Tab1.TextColor3 = Theme.SubText; Tab2.TextColor3 = Theme.SubText; Tab3.TextColor3 = Theme.SubText
+    Tab1.BackgroundColor3 = Theme.Background; Tab2.BackgroundColor3 = Theme.Background; Tab3.BackgroundColor3 = Theme.Background
+    Page1.Visible = false; Page2.Visible = false; Page3.Visible = false
+    
+    btn.TextColor3 = Theme.Accent
+    btn.BackgroundColor3 = Theme.Element
+    page.Visible = true
 end
-CreateLinkBtn("Telegram: QLogovo", "https://t.me/QLogovo", 0)
-CreateLinkBtn("Discord Server", "https://discord.gg/9wCEUewSbN", 50)
+SwitchTab(Tab1, Page1)
 
-local MinCircle = Instance.new("TextButton")
-MinCircle.Name = "OpenCircle"
-MinCircle.Parent = ScreenGui
-MinCircle.BackgroundColor3 = Colors.Purple
-MinCircle.Size = UDim2.new(0, 60, 0, 60)
-MinCircle.Position = UDim2.new(0.1, 0, 0.1, 0)
-MinCircle.Text = "Q"
-MinCircle.Font = Enum.Font.FredokaOne
-MinCircle.TextColor3 = Colors.Text
-MinCircle.TextSize = 24
-MinCircle.Visible = false
-MinCircle.AutoButtonColor = true
-local MCC = Instance.new("UICorner", MinCircle)
-MCC.CornerRadius = UDim.new(1, 0)
-local MCS = Instance.new("UIStroke", MinCircle)
-MCS.Color = Colors.Text
-MCS.Thickness = 2
-MCS.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-local function SwitchTab(activeBtn, activePage)
-    Tab1.BackgroundColor3 = Colors.Black; Tab1.TextColor3 = Colors.SubText
-    Tab2.BackgroundColor3 = Colors.Black; Tab2.TextColor3 = Colors.SubText
-    Page1.Visible = false; Page2.Visible = false
-    activeBtn.BackgroundColor3 = Colors.Purple
-    activeBtn.TextColor3 = Colors.Text
-    activePage.Visible = true
-    activePage.Position = UDim2.new(0, 0, 0, 15)
-    TweenService:Create(activePage, TweenInfo.new(0.25), {Position = UDim2.new(0,0,0,0)}):Play()
-end
 Tab1.MouseButton1Click:Connect(function() SwitchTab(Tab1, Page1) end)
 Tab2.MouseButton1Click:Connect(function() SwitchTab(Tab2, Page2) end)
+Tab3.MouseButton1Click:Connect(function() SwitchTab(Tab3, Page3) end)
 
-local function Drag(frame, hold)
-    local dragToggle, dragStart, startPos
-    hold.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragToggle = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragToggle = false end end)
+local function CreateButton(text, parent, x, y, callback)
+    local B = Instance.new("TextButton")
+    B.Parent = parent
+    B.BackgroundColor3 = Theme.Element
+    B.Position = UDim2.new(0, x, 0, y)
+    B.Size = UDim2.new(0, 165, 0, 35)
+    B.Font = Enum.Font.GothamMedium
+    B.Text = text
+    B.TextColor3 = Theme.Text
+    B.TextSize = 12
+    B.AutoButtonColor = false
+    
+    local C = Instance.new("UICorner", B)
+    C.CornerRadius = UDim.new(0, 4)
+    
+    local S = Instance.new("UIStroke", B)
+    S.Color = Theme.Element
+    S.Thickness = 1
+    S.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    
+    local Toggled = false
+    
+    B.MouseButton1Click:Connect(function()
+        Toggled = not Toggled
+        if Toggled then
+            TweenService:Create(B, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(25,25,25)}):Play()
+            TweenService:Create(S, TweenInfo.new(0.2), {Color = Theme.Accent}):Play()
+            TweenService:Create(B, TweenInfo.new(0.2), {TextColor3 = Theme.Accent}):Play()
+        else
+            TweenService:Create(B, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play()
+            TweenService:Create(S, TweenInfo.new(0.2), {Color = Theme.Element}):Play()
+            TweenService:Create(B, TweenInfo.new(0.2), {TextColor3 = Theme.Text}):Play()
+        end
+        callback(Toggled, B)
+    end)
+    return B
+end
+
+local function CreateInput(text, parent, x, y, callback)
+    local F = Instance.new("Frame")
+    F.Parent = parent
+    F.BackgroundColor3 = Theme.Element
+    F.Position = UDim2.new(0, x, 0, y)
+    F.Size = UDim2.new(0, 165, 0, 35)
+    
+    local C = Instance.new("UICorner", F)
+    C.CornerRadius = UDim.new(0, 4)
+    
+    local TB = Instance.new("TextBox")
+    TB.Parent = F
+    TB.BackgroundTransparency = 1
+    TB.Size = UDim2.new(1, 0, 1, 0)
+    TB.Font = Enum.Font.GothamMedium
+    TB.Text = text
+    TB.TextColor3 = Theme.SubText
+    TB.TextSize = 12
+    
+    TB.FocusLost:Connect(function()
+        local n = tonumber(string.match(TB.Text, "%d+"))
+        if n then
+            callback(n)
+            TB.TextColor3 = Theme.Accent
+        else
+            TB.TextColor3 = Theme.SubText
         end
     end)
+end
+
+-- PAGE 1 CONTENT
+CreateButton("Fly", Page1, 10, 15, function(s, btn)
+    State.Flying = s
+    if s then 
+        btn.Text = "Fly: Enabled"
+        local Char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local HRP = Char:WaitForChild("HumanoidRootPart")
+        local Hum = Char:WaitForChild("Humanoid")
+        local BG = Instance.new("BodyGyro", HRP); BG.P = 9e4; BG.maxTorque = Vector3.new(9e9,9e9,9e9); BG.cframe = HRP.CFrame
+        local BV = Instance.new("BodyVelocity", HRP); BV.velocity = Vector3.new(0,0,0); BV.maxForce = Vector3.new(9e9,9e9,9e9)
+        Hum.PlatformStand = true
+        task.spawn(function()
+            while State.Flying and Char and Hum.Health > 0 do
+                RunService.RenderStepped:Wait()
+                local Cam = workspace.CurrentCamera
+                BG.cframe = Cam.CFrame
+                local d = Vector3.new(0,0,0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then d = d + Cam.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then d = d - Cam.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then d = d - Cam.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then d = d + Cam.CFrame.RightVector end
+                BV.velocity = d * State.FlySpeed
+            end
+            BG:Destroy(); BV:Destroy(); Hum.PlatformStand = false
+        end)
+    else
+        btn.Text = "Fly"
+    end
+end)
+
+CreateInput("Fly Speed (20)", Page1, 185, 15, function(v) State.FlySpeed = v; Notify("Fly Speed: "..v) end)
+
+CreateButton("Noclip", Page1, 10, 60, function(s, btn)
+    State.Noclip = s
+    btn.Text = s and "Noclip: Active" or "Noclip"
+end)
+
+CreateButton("Infinite Jump", Page1, 185, 60, function(s, btn)
+    State.InfJump = s
+    btn.Text = s and "Inf Jump: Active" or "Infinite Jump"
+end)
+
+CreateButton("Click TP (Ctrl)", Page1, 10, 105, function(s, btn)
+    State.CtrlTP = s
+    btn.Text = s and "TP Ready (Ctrl+Click)" or "Click TP (Ctrl)"
+end)
+
+CreateButton("Fullbright", Page1, 185, 105, function(s, btn)
+    State.Fullbright = s
+    if s then
+        Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = false
+    else
+        Lighting.Brightness = 1; Lighting.GlobalShadows = true
+    end
+    btn.Text = s and "Light: On" or "Fullbright"
+end)
+
+-- PAGE 2 CONTENT
+CreateInput("WalkSpeed (16)", Page2, 10, 15, function(v)
+    if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = v; Notify("WalkSpeed: "..v) end
+end)
+CreateInput("JumpPower (50)", Page2, 10, 60, function(v)
+    if LocalPlayer.Character then LocalPlayer.Character.Humanoid.UseJumpPower = true; LocalPlayer.Character.Humanoid.JumpPower = v; Notify("JumpPower: "..v) end
+end)
+
+-- PAGE 3 CONTENT
+local InfoL = Instance.new("TextLabel", Page3)
+InfoL.BackgroundTransparency = 1
+InfoL.Size = UDim2.new(1,0,1,0)
+InfoL.Text = "QUWY SCRIPT\nMinimalist Edition\n\nTelegram: @QLogovo\nDiscord: discord.gg/9wCEUewSbN"
+InfoL.TextColor3 = Theme.SubText
+InfoL.Font = Enum.Font.Gotham
+InfoL.TextSize = 14
+
+local CopyBtn = Instance.new("TextButton", Page3)
+CopyBtn.BackgroundColor3 = Theme.Element
+CopyBtn.Position = UDim2.new(0.5, -60, 0.7, 0)
+CopyBtn.Size = UDim2.new(0, 120, 0, 30)
+CopyBtn.Font = Enum.Font.GothamMedium
+CopyBtn.Text = "Copy Links"
+CopyBtn.TextColor3 = Theme.Text
+CopyBtn.TextSize = 12
+Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0,4)
+CopyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then setclipboard("https://t.me/QLogovo\nhttps://discord.gg/9wCEUewSbN"); Notify("Links Copied") end
+end)
+
+-- LOGIC
+RunService.Stepped:Connect(function()
+    if State.Noclip and LocalPlayer.Character then
+        for _,v in pairs(LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end
+        end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if State.InfJump and LocalPlayer.Character then LocalPlayer.Character.Humanoid:ChangeState("Jumping") end
+end)
+
+Mouse.Button1Down:Connect(function()
+    if State.CtrlTP and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and Mouse.Target then
+        LocalPlayer.Character:MoveTo(Mouse.Hit.p)
+    end
+end)
+
+-- CIRCLE & DRAG
+local Circle = Instance.new("TextButton")
+Circle.Parent = ScreenGui
+Circle.BackgroundColor3 = Theme.Background
+Circle.Size = UDim2.new(0, 45, 0, 45)
+Circle.Position = UDim2.new(0.05, 0, 0.1, 0)
+Circle.Text = "Q"
+Circle.Font = Enum.Font.GothamBold
+Circle.TextColor3 = Theme.Accent
+Circle.TextSize = 22
+Circle.Visible = false
+Circle.AutoButtonColor = true
+
+local CC = Instance.new("UICorner", Circle)
+CC.CornerRadius = UDim.new(1, 0)
+
+local CS = Instance.new("UIStroke", Circle)
+CS.Color = Theme.Accent
+CS.Thickness = 1.5
+CS.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local function MakeDrag(frame, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = frame.Position
+        end
+    end)
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
     UserInputService.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragToggle then
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - dragStart
             TweenService:Create(frame, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
         end
     end)
 end
-Drag(MainFrame, TopBar)
+MakeDrag(Main, TopBar)
 
-local CircleWasDragged = false
-local function DragCircle(frame)
-    local dragToggle, dragStart, startPos
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragToggle = true
-            dragStart = input.Position
-            startPos = frame.Position
-            CircleWasDragged = false
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragToggle = false end end)
+local CircleDragged = false
+local function CircleDragLogic()
+    local dragging, dragStart, startPos
+    Circle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = Circle.Position; CircleDragged = false
         end
+    end)
+    Circle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragToggle then
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - dragStart
-            if delta.Magnitude > 5 then
-                CircleWasDragged = true
-                TweenService:Create(frame, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
-            end
+            if delta.Magnitude > 3 then CircleDragged = true end
+            TweenService:Create(Circle, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
         end
     end)
 end
-DragCircle(MinCircle)
+CircleDragLogic()
 
-CloseBtn.MouseButton1Click:Connect(function()
-    if Flying then if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid.PlatformStand = false end end
-    TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1}):Play()
-    wait(0.3)
-    ScreenGui:Destroy()
-end)
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
 MinBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MinCircle.Visible = true
-    MinCircle.Size = UDim2.new(0,0,0,0)
-    TweenService:Create(MinCircle, TweenInfo.new(0.4, Enum.EasingStyle.Elastic), {Size = UDim2.new(0, 60, 0, 60)}):Play()
-end)
-MinCircle.MouseButton1Click:Connect(function()
-    if CircleWasDragged then CircleWasDragged = false return end
-    MinCircle.Visible = false
-    MainFrame.Visible = true
-    MainFrame.Size = UDim2.new(0,0,0,0)
-    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 500, 0, 400)}):Play()
+    Main.Visible = false
+    Circle.Visible = true
+    Circle.Size = UDim2.new(0,0,0,0)
+    TweenService:Create(Circle, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = UDim2.new(0,45,0,45)}):Play()
 end)
 
-local BodyGyro, BodyVelocity
-local function StartFly()
-    Flying = true
-    FlyBtn.Text = "FLYING..."
-    TweenService:Create(FlyStroke, TweenInfo.new(0.2), {Color = Colors.Success}):Play()
-    TweenService:Create(FlyBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Success}):Play()
-    local Char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local HRP = Char:WaitForChild("HumanoidRootPart")
-    local Humanoid = Char:WaitForChild("Humanoid")
-    BodyGyro = Instance.new("BodyGyro", HRP)
-    BodyGyro.P = 9e4
-    BodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-    BodyGyro.cframe = HRP.CFrame
-    BodyVelocity = Instance.new("BodyVelocity", HRP)
-    BodyVelocity.velocity = Vector3.new(0,0,0)
-    BodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
-    Humanoid.PlatformStand = true
-    task.spawn(function()
-        while Flying and Char and Humanoid.Health > 0 do
-            RunService.RenderStepped:Wait()
-            if not Flying then break end
-            local Cam = workspace.CurrentCamera
-            BodyGyro.cframe = Cam.CFrame
-            local dir = Vector3.new(0,0,0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + Cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Cam.CFrame.RightVector end
-            BodyVelocity.velocity = dir * FlySpeed
-        end
-    end)
-end
-local function StopFly()
-    Flying = false
-    FlyBtn.Text = "ENABLE FLY"
-    TweenService:Create(FlyStroke, TweenInfo.new(0.2), {Color = Colors.Purple}):Play()
-    TweenService:Create(FlyBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Text}):Play()
-    if LocalPlayer.Character then
-        local HRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local Hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-        if HRP then
-            if HRP:FindFirstChild("BodyGyro") then HRP.BodyGyro:Destroy() end
-            if HRP:FindFirstChild("BodyVelocity") then HRP.BodyVelocity:Destroy() end
-        end
-        if Hum then Hum.PlatformStand = false end
-    end
-end
-FlyBtn.MouseButton1Click:Connect(function() if Flying then StopFly() else StartFly() end end)
-
-RunService.Stepped:Connect(function()
-    if Noclip and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
-        end
-    end
-end)
-NoclipBtn.MouseButton1Click:Connect(function()
-    Noclip = not Noclip
-    if Noclip then
-        NoclipBtn.Text = "NOCLIP: ON"
-        TweenService:Create(NoclipStroke, TweenInfo.new(0.2), {Color = Colors.Success}):Play()
-        TweenService:Create(NoclipBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Success}):Play()
-    else
-        NoclipBtn.Text = "NOCLIP: OFF"
-        TweenService:Create(NoclipStroke, TweenInfo.new(0.2), {Color = Colors.Purple}):Play()
-        TweenService:Create(NoclipBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Text}):Play()
+Circle.MouseButton1Click:Connect(function()
+    if not CircleDragged then
+        Circle.Visible = false
+        Main.Visible = true
+        Main.Size = UDim2.new(0,0,0,0)
+        TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = UDim2.new(0, 480, 0, 320)}):Play()
     end
 end)
 
-UserInputService.JumpRequest:Connect(function()
-    if InfJump and LocalPlayer.Character then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
-end)
-InfJumpBtn.MouseButton1Click:Connect(function()
-    InfJump = not InfJump
-    if InfJump then
-        InfJumpBtn.Text = "INF JUMP: ON"
-        TweenService:Create(InfJumpStroke, TweenInfo.new(0.2), {Color = Colors.Success}):Play()
-        TweenService:Create(InfJumpBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Success}):Play()
-    else
-        InfJumpBtn.Text = "INF JUMP: OFF"
-        TweenService:Create(InfJumpStroke, TweenInfo.new(0.2), {Color = Colors.Purple}):Play()
-        TweenService:Create(InfJumpBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Text}):Play()
-    end
-end)
-
-FullbrightBtn.MouseButton1Click:Connect(function()
-    FullbrightEnabled = not FullbrightEnabled
-    if FullbrightEnabled then
-        FullbrightBtn.Text = "FULLBRIGHT: ON"
-        TweenService:Create(FBStroke, TweenInfo.new(0.2), {Color = Colors.Success}):Play()
-        TweenService:Create(FullbrightBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Success}):Play()
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-    else
-        FullbrightBtn.Text = "FULLBRIGHT: OFF"
-        TweenService:Create(FBStroke, TweenInfo.new(0.2), {Color = Colors.Purple}):Play()
-        TweenService:Create(FullbrightBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Text}):Play()
-        Lighting.Brightness = 1
-        Lighting.GlobalShadows = true
-        Lighting.ClockTime = 12
-    end
-end)
-
-CtrlTpBtn.MouseButton1Click:Connect(function()
-    CtrlTP = not CtrlTP
-    if CtrlTP then
-        CtrlTpBtn.Text = "CTRL TP: ON"
-        TweenService:Create(TPStroke, TweenInfo.new(0.2), {Color = Colors.Success}):Play()
-        TweenService:Create(CtrlTpBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Success}):Play()
-        ShowNotification("Hold Ctrl + Click to TP")
-    else
-        CtrlTpBtn.Text = "CTRL TP: OFF"
-        TweenService:Create(TPStroke, TweenInfo.new(0.2), {Color = Colors.Purple}):Play()
-        TweenService:Create(CtrlTpBtn, TweenInfo.new(0.2), {TextColor3 = Colors.Text}):Play()
-    end
-end)
-
-Mouse.Button1Down:Connect(function()
-    if CtrlTP and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and Mouse.Target then
-        LocalPlayer.Character:MoveTo(Mouse.Hit.p)
-    end
-end)
-
-MainFrame.Size = UDim2.new(0,0,0,0)
-TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 500, 0, 400)}):Play()
+Main.Size = UDim2.new(0,0,0,0)
+TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 480, 0, 320)}):Play()
