@@ -4,9 +4,13 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
+local LogService = game:GetService("LogService")
 
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
 
 if CoreGui:FindFirstChild("QUWY_MINIMAL") then
     CoreGui.QUWY_MINIMAL:Destroy()
@@ -27,8 +31,12 @@ local State = {
     Noclip = false, InfJump = false,
     CtrlTP = false, Fullbright = false,
     ESP = false, Spin = false,
-    XRay = false
+    XRay = false, Tracers = false,
+    Spectating = false, AntiAFK = false,
+    NoFog = false
 }
+
+local TP_P = nil
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "QUWY_MINIMAL"
@@ -107,17 +115,19 @@ local Tab1 = CreateTabBtn("Movement")
 local Tab2 = CreateTabBtn("Visuals")
 local Tab3 = CreateTabBtn("Players")
 local Tab4 = CreateTabBtn("Stats")
-local Tab5 = CreateTabBtn("Info")
+local Tab5 = CreateTabBtn("Game")
+local Tab6 = CreateTabBtn("Info")
 
 local Page1 = Instance.new("Frame", PageContainer); Page1.Size = UDim2.new(1,0,1,0); Page1.BackgroundTransparency = 1
 local Page2 = Instance.new("Frame", PageContainer); Page2.Size = UDim2.new(1,0,1,0); Page2.BackgroundTransparency = 1; Page2.Visible = false
 local Page3 = Instance.new("Frame", PageContainer); Page3.Size = UDim2.new(1,0,1,0); Page3.BackgroundTransparency = 1; Page3.Visible = false
 local Page4 = Instance.new("Frame", PageContainer); Page4.Size = UDim2.new(1,0,1,0); Page4.BackgroundTransparency = 1; Page4.Visible = false
 local Page5 = Instance.new("Frame", PageContainer); Page5.Size = UDim2.new(1,0,1,0); Page5.BackgroundTransparency = 1; Page5.Visible = false
+local Page6 = Instance.new("Frame", PageContainer); Page6.Size = UDim2.new(1,0,1,0); Page6.BackgroundTransparency = 1; Page6.Visible = false
 
 local function SwitchTab(btn, page)
-    for _, t in pairs({Tab1, Tab2, Tab3, Tab4, Tab5}) do t.TextColor3 = Theme.SubText; t.BackgroundColor3 = Theme.Background end
-    for _, p in pairs({Page1, Page2, Page3, Page4, Page5}) do p.Visible = false end
+    for _, t in pairs({Tab1, Tab2, Tab3, Tab4, Tab5, Tab6}) do t.TextColor3 = Theme.SubText; t.BackgroundColor3 = Theme.Background end
+    for _, p in pairs({Page1, Page2, Page3, Page4, Page5, Page6}) do p.Visible = false end
     btn.TextColor3 = Theme.Accent; btn.BackgroundColor3 = Theme.Element; page.Visible = true
 end
 SwitchTab(Tab1, Page1)
@@ -126,6 +136,7 @@ Tab2.MouseButton1Click:Connect(function() SwitchTab(Tab2, Page2) end)
 Tab3.MouseButton1Click:Connect(function() SwitchTab(Tab3, Page3) end)
 Tab4.MouseButton1Click:Connect(function() SwitchTab(Tab4, Page4) end)
 Tab5.MouseButton1Click:Connect(function() SwitchTab(Tab5, Page5) end)
+Tab6.MouseButton1Click:Connect(function() SwitchTab(Tab6, Page6) end)
 
 local function CreateButton(text, parent, x, y, callback)
     local B = Instance.new("TextButton"); B.Parent = parent; B.BackgroundColor3 = Theme.Element; B.Position = UDim2.new(0, x, 0, y); B.Size = UDim2.new(0, 165, 0, 35)
@@ -147,6 +158,19 @@ local function CreateButton(text, parent, x, y, callback)
         callback(Toggled, B)
     end)
     return B
+end
+
+local function CreateClickButton(text, parent, x, y, callback)
+    local B = Instance.new("TextButton"); B.Parent = parent; B.BackgroundColor3 = Theme.Element; B.Position = UDim2.new(0, x, 0, y); B.Size = UDim2.new(0, 165, 0, 35)
+    B.Font = Enum.Font.GothamMedium; B.Text = text; B.TextColor3 = Theme.Text; B.TextSize = 12
+    local C = Instance.new("UICorner", B); C.CornerRadius = UDim.new(0, 4)
+    local S = Instance.new("UIStroke", B); S.Color = Theme.Element; S.Thickness = 1
+    B.MouseButton1Click:Connect(function()
+        TweenService:Create(B, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Accent}):Play()
+        wait(0.1)
+        TweenService:Create(B, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Element}):Play()
+        callback()
+    end)
 end
 
 local function CreateInput(text, parent, x, y, callback)
@@ -220,13 +244,39 @@ CreateButton("ESP (Highlight)", Page2, 10, 15, function(s, btn)
         EspFolder:ClearAllChildren()
     end
 end)
-CreateButton("Fullbright", Page2, 185, 15, function(s, btn)
+CreateButton("Tracers", Page2, 185, 15, function(s, btn)
+    State.Tracers = s
+    btn.Text = s and "Tracers: ON" or "Tracers"
+    if s then
+        task.spawn(function()
+            while State.Tracers do
+                RunService.RenderStepped:Wait()
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        if not p.Character:FindFirstChild("TracerLine") then
+                            local a = Instance.new("Beam", p.Character); a.Name = "TracerLine"; a.FaceCamera = true; a.Width0 = 0.1; a.Width1 = 0.1; a.Color = ColorSequence.new(Theme.Accent)
+                            local att0 = Instance.new("Attachment", p.Character.HumanoidRootPart)
+                            local att1 = Instance.new("Attachment", LocalPlayer.Character.HumanoidRootPart)
+                            a.Attachment0 = att0; a.Attachment1 = att1
+                        end
+                    end
+                end
+            end
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character then 
+                    for _, v in pairs(p.Character:GetChildren()) do if v.Name == "TracerLine" or v:IsA("Attachment") then v:Destroy() end end
+                end
+            end
+        end)
+    end
+end)
+CreateButton("Fullbright", Page2, 10, 60, function(s, btn)
     State.Fullbright = s
     btn.Text = s and "Light: On" or "Fullbright"
     if s then Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = false
     else Lighting.Brightness = 1; Lighting.GlobalShadows = true end
 end)
-CreateButton("X-Ray (Walls)", Page2, 10, 60, function(s, btn)
+CreateButton("X-Ray (Walls)", Page2, 185, 60, function(s, btn)
     State.XRay = s
     btn.Text = s and "X-Ray: Active" or "X-Ray (Walls)"
     for _, v in pairs(workspace:GetDescendants()) do
@@ -239,110 +289,78 @@ CreateButton("X-Ray (Walls)", Page2, 10, 60, function(s, btn)
         end
     end
 end)
+CreateButton("No Fog", Page2, 10, 105, function(s, btn)
+    State.NoFog = s
+    btn.Text = s and "Fog Removed" or "No Fog"
+    if s then Lighting.FogEnd = 9e9 else Lighting.FogEnd = 10000 end
+end)
 
 local TP_Target = ""
+local TP_P = nil
 
 local InputFrame = Instance.new("Frame", Page3)
-InputFrame.BackgroundColor3 = Theme.Element
-InputFrame.Position = UDim2.new(0, 10, 0, 15)
-InputFrame.Size = UDim2.new(0, 155, 0, 35)
+InputFrame.BackgroundColor3 = Theme.Element; InputFrame.Position = UDim2.new(0, 10, 0, 15); InputFrame.Size = UDim2.new(0, 155, 0, 35)
 Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 4)
 
 local TPInput = Instance.new("TextBox", InputFrame)
-TPInput.BackgroundTransparency = 1
-TPInput.Size = UDim2.new(1, -10, 1, 0)
-TPInput.Position = UDim2.new(0, 10, 0, 0)
-TPInput.Font = Enum.Font.GothamMedium
-TPInput.Text = "Player Name..."
-TPInput.TextColor3 = Theme.SubText
-TPInput.TextSize = 12
-TPInput.TextXAlignment = Enum.TextXAlignment.Left
+TPInput.BackgroundTransparency = 1; TPInput.Size = UDim2.new(1, -10, 1, 0); TPInput.Position = UDim2.new(0, 10, 0, 0)
+TPInput.Font = Enum.Font.GothamMedium; TPInput.Text = "Player Name..."; TPInput.TextColor3 = Theme.SubText; TPInput.TextSize = 12; TPInput.TextXAlignment = Enum.TextXAlignment.Left
 
 TPInput.FocusLost:Connect(function()
-    TP_Target = TPInput.Text
-    if TP_Target ~= "" then TPInput.TextColor3 = Theme.Accent else TPInput.TextColor3 = Theme.SubText end
-end)
-
-local TPBtn = Instance.new("TextButton", Page3)
-TPBtn.BackgroundColor3 = Theme.Accent
-TPBtn.Position = UDim2.new(0, 175, 0, 15)
-TPBtn.Size = UDim2.new(0, 60, 0, 35)
-TPBtn.Font = Enum.Font.GothamBold
-TPBtn.Text = "TP"
-TPBtn.TextColor3 = Theme.Text
-TPBtn.TextSize = 12
-Instance.new("UICorner", TPBtn).CornerRadius = UDim.new(0, 4)
-
-TPBtn.MouseButton1Click:Connect(function()
-    for _, p in pairs(Players:GetPlayers()) do
-        if string.sub(string.lower(p.Name), 1, string.len(TP_Target)) == string.lower(TP_Target) then
-            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame
-                Notify("Teleported to "..p.Name)
+    local t = TPInput.Text
+    if t ~= "" then 
+        TPInput.TextColor3 = Theme.Accent 
+        for _, p in pairs(Players:GetPlayers()) do
+            if string.sub(string.lower(p.Name), 1, string.len(t)) == string.lower(t) then 
+                TP_P = p
+                TPInput.Text = p.Name
+                break 
             end
         end
+    else 
+        TPInput.TextColor3 = Theme.SubText 
     end
 end)
 
 local DropToggle = Instance.new("TextButton", Page3)
-DropToggle.BackgroundColor3 = Theme.Element
-DropToggle.Position = UDim2.new(0, 245, 0, 15)
-DropToggle.Size = UDim2.new(0, 35, 0, 35)
-DropToggle.Font = Enum.Font.GothamBold
-DropToggle.Text = "▼"
-DropToggle.TextColor3 = Theme.SubText
-DropToggle.TextSize = 12
+DropToggle.BackgroundColor3 = Theme.Element; DropToggle.Position = UDim2.new(0, 175, 0, 15); DropToggle.Size = UDim2.new(0, 35, 0, 35)
+DropToggle.Font = Enum.Font.GothamBold; DropToggle.Text = "▼"; DropToggle.TextColor3 = Theme.SubText; DropToggle.TextSize = 12
 Instance.new("UICorner", DropToggle).CornerRadius = UDim.new(0, 4)
 
+local TPBtn = Instance.new("TextButton", Page3)
+TPBtn.BackgroundColor3 = Theme.Accent; TPBtn.Position = UDim2.new(0, 220, 0, 15); TPBtn.Size = UDim2.new(0, 60, 0, 35)
+TPBtn.Font = Enum.Font.GothamBold; TPBtn.Text = "TP"; TPBtn.TextColor3 = Theme.Text; TPBtn.TextSize = 12
+Instance.new("UICorner", TPBtn).CornerRadius = UDim.new(0, 4)
+
+TPBtn.MouseButton1Click:Connect(function()
+    if TP_P and TP_P.Character and TP_P.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = TP_P.Character.HumanoidRootPart.CFrame
+        Notify("Teleported to "..TP_P.Name)
+    end
+end)
+
 local DropFrame = Instance.new("Frame", Page3)
-DropFrame.BackgroundColor3 = Theme.Element
-DropFrame.Position = UDim2.new(0, 10, 0, 60)
-DropFrame.Size = UDim2.new(0, 270, 0, 180)
-DropFrame.Visible = false
-DropFrame.ZIndex = 10
-Instance.new("UICorner", DropFrame).CornerRadius = UDim.new(0, 4)
-Instance.new("UIStroke", DropFrame).Color = Theme.Accent
+DropFrame.BackgroundColor3 = Theme.Element; DropFrame.Position = UDim2.new(0, 10, 0, 55); DropFrame.Size = UDim2.new(0, 270, 0, 180); DropFrame.Visible = false; DropFrame.ZIndex = 10
+Instance.new("UICorner", DropFrame).CornerRadius = UDim.new(0, 4); Instance.new("UIStroke", DropFrame).Color = Theme.Accent
 
 local Scroll = Instance.new("ScrollingFrame", DropFrame)
-Scroll.BackgroundTransparency = 1
-Scroll.Size = UDim2.new(1, -10, 0, 130)
-Scroll.Position = UDim2.new(0, 5, 0, 5)
-Scroll.ScrollBarThickness = 2
-Scroll.ZIndex = 11
-
-local ListLayout = Instance.new("UIListLayout", Scroll)
-ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+Scroll.BackgroundTransparency = 1; Scroll.Size = UDim2.new(1, -10, 0, 130); Scroll.Position = UDim2.new(0, 5, 0, 5); Scroll.ScrollBarThickness = 2; Scroll.ZIndex = 11
+local ListLayout = Instance.new("UIListLayout", Scroll); ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local RefreshBtn = Instance.new("TextButton", DropFrame)
-RefreshBtn.BackgroundColor3 = Theme.Background
-RefreshBtn.Position = UDim2.new(0, 5, 1, -35)
-RefreshBtn.Size = UDim2.new(1, -10, 0, 30)
-RefreshBtn.Font = Enum.Font.GothamMedium
-RefreshBtn.Text = "Refresh List"
-RefreshBtn.TextColor3 = Theme.Accent
-RefreshBtn.TextSize = 12
-RefreshBtn.ZIndex = 11
+RefreshBtn.BackgroundColor3 = Theme.Background; RefreshBtn.Position = UDim2.new(0, 5, 1, -40); RefreshBtn.Size = UDim2.new(1, -10, 0, 35)
+RefreshBtn.Font = Enum.Font.GothamMedium; RefreshBtn.Text = "Refresh List"; RefreshBtn.TextColor3 = Theme.Accent; RefreshBtn.TextSize = 12; RefreshBtn.ZIndex = 11
 Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0, 4)
 
 local function RefreshPlayers()
     for _, v in pairs(Scroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
-            local B = Instance.new("TextButton", Scroll)
-            B.BackgroundColor3 = Theme.Background
-            B.Size = UDim2.new(1, 0, 0, 25)
-            B.Font = Enum.Font.Gotham
-            B.Text = "  " .. p.Name
-            B.TextColor3 = Theme.Text
-            B.TextSize = 12
-            B.TextXAlignment = Enum.TextXAlignment.Left
-            B.ZIndex = 12
+            local B = Instance.new("TextButton", Scroll); B.BackgroundColor3 = Theme.Background; B.Size = UDim2.new(1, 0, 0, 25)
+            B.Font = Enum.Font.Gotham; B.Text = "  " .. p.Name; B.TextColor3 = Theme.Text; B.TextSize = 12; B.TextXAlignment = Enum.TextXAlignment.Left; B.ZIndex = 12
             Instance.new("UICorner", B).CornerRadius = UDim.new(0, 4)
             B.MouseButton1Click:Connect(function()
-                TPInput.Text = p.Name
-                TPInput.TextColor3 = Theme.Accent
-                TP_Target = p.Name
-                DropFrame.Visible = false
+                TPInput.Text = p.Name; TPInput.TextColor3 = Theme.Accent; TP_P = p; DropFrame.Visible = false
             end)
         end
     end
@@ -350,12 +368,25 @@ local function RefreshPlayers()
 end
 
 RefreshBtn.MouseButton1Click:Connect(RefreshPlayers)
-DropToggle.MouseButton1Click:Connect(function()
-    DropFrame.Visible = not DropFrame.Visible
-    if DropFrame.Visible then RefreshPlayers() end
+DropToggle.MouseButton1Click:Connect(function() DropFrame.Visible = not DropFrame.Visible; if DropFrame.Visible then RefreshPlayers() end end)
+
+CreateButton("Spectate", Page3, 10, 60, function(s, btn)
+    State.Spectating = s
+    btn.Text = s and "Watching..." or "Spectate"
+    if s then
+        if TP_P then
+            Camera.CameraSubject = TP_P.Character.Humanoid
+            Notify("Spectating " .. TP_P.Name)
+        else
+            Notify("Select player first!")
+            s = false; State.Spectating = false; btn.Text = "Spectate"
+        end
+    else
+        Camera.CameraSubject = LocalPlayer.Character.Humanoid
+    end
 end)
 
-CreateButton("SpinBot", Page3, 10, 60, function(s, btn)
+CreateButton("SpinBot", Page3, 185, 60, function(s, btn)
     State.Spin = s
     btn.Text = s and "Spinning..." or "SpinBot"
     if s then
@@ -369,85 +400,80 @@ end)
 
 local function CreateStatInput(name, default, y, callback)
     local L = Instance.new("TextLabel", Page4)
-    L.BackgroundTransparency = 1
-    L.Position = UDim2.new(0, 10, 0, y)
-    L.Size = UDim2.new(0, 200, 0, 20)
-    L.Font = Enum.Font.GothamBold
-    L.Text = name .. " (Default: " .. default .. ")"
-    L.TextColor3 = Theme.SubText
-    L.TextSize = 11
-    L.TextXAlignment = Enum.TextXAlignment.Left
-
+    L.BackgroundTransparency = 1; L.Position = UDim2.new(0, 10, 0, y); L.Size = UDim2.new(0, 200, 0, 20)
+    L.Font = Enum.Font.GothamBold; L.Text = name .. " (Default: " .. default .. ")"; L.TextColor3 = Theme.SubText; L.TextSize = 11; L.TextXAlignment = Enum.TextXAlignment.Left
     local F = Instance.new("Frame", Page4)
-    F.BackgroundColor3 = Theme.Element
-    F.Position = UDim2.new(0, 10, 0, y + 22)
-    F.Size = UDim2.new(0, 160, 0, 30)
+    F.BackgroundColor3 = Theme.Element; F.Position = UDim2.new(0, 10, 0, y + 22); F.Size = UDim2.new(0, 160, 0, 30)
     Instance.new("UICorner", F).CornerRadius = UDim.new(0, 4)
-
     local TB = Instance.new("TextBox", F)
-    TB.BackgroundTransparency = 1
-    TB.Size = UDim2.new(1, 0, 1, 0)
-    TB.Font = Enum.Font.GothamMedium
-    TB.Text = default
-    TB.TextColor3 = Theme.Text
-    TB.TextSize = 12
-    
+    TB.BackgroundTransparency = 1; TB.Size = UDim2.new(1, 0, 1, 0); TB.Font = Enum.Font.GothamMedium; TB.Text = default; TB.TextColor3 = Theme.Text; TB.TextSize = 12
     TB.FocusLost:Connect(function()
         local n = tonumber(TB.Text)
-        if n then 
-            callback(n)
-            TB.TextColor3 = Theme.Accent 
-        else 
-            TB.TextColor3 = Theme.SubText 
-        end
+        if n then callback(n); TB.TextColor3 = Theme.Accent else TB.TextColor3 = Theme.SubText end
     end)
 end
 
 CreateStatInput("WalkSpeed", "16", 10, function(v) if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = v; Notify("WalkSpeed: "..v) end end)
 CreateStatInput("JumpPower", "50", 70, function(v) if LocalPlayer.Character then LocalPlayer.Character.Humanoid.UseJumpPower = true; LocalPlayer.Character.Humanoid.JumpPower = v; Notify("JumpPower: "..v) end end)
 CreateStatInput("Gravity", "196.2", 130, function(v) workspace.Gravity = v; Notify("Gravity: "..v) end)
+CreateStatInput("Field of View", "70", 190, function(v) Camera.FieldOfView = v; Notify("FOV: "..v) end)
 
-local AboutTitle = Instance.new("TextLabel", Page5)
-AboutTitle.BackgroundTransparency = 1
-AboutTitle.Size = UDim2.new(1, 0, 0.3, 0)
-AboutTitle.Position = UDim2.new(0, 0, 0.1, 0)
-AboutTitle.Font = Enum.Font.FredokaOne
-AboutTitle.Text = "QUWY"
-AboutTitle.TextColor3 = Theme.Accent
-AboutTitle.TextSize = 50
+CreateClickButton("Rejoin Server", Page5, 10, 15, function()
+    Notify("Rejoining...")
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
 
-local SubTitle = Instance.new("TextLabel", Page5)
-SubTitle.BackgroundTransparency = 1
-SubTitle.Position = UDim2.new(0, 0, 0.4, 0)
-SubTitle.Size = UDim2.new(1, 0, 0, 20)
-SubTitle.Font = Enum.Font.Gotham
-SubTitle.Text = "pls follow 😭"
-SubTitle.TextColor3 = Theme.SubText
-SubTitle.TextSize = 14
+CreateClickButton("Reset Character", Page5, 185, 15, function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.Health = 0
+        Notify("Respawning...")
+    end
+end)
+
+CreateClickButton("Time: Day", Page5, 10, 60, function()
+    Lighting.ClockTime = 14
+    Notify("Set time to Day")
+end)
+
+CreateClickButton("Time: Night", Page5, 185, 60, function()
+    Lighting.ClockTime = 0
+    Notify("Set time to Night")
+end)
+
+CreateButton("Anti-AFK", Page5, 10, 105, function(s, btn)
+    State.AntiAFK = s
+    btn.Text = s and "Anti-AFK: ON" or "Anti-AFK"
+    if s then
+        LocalPlayer.Idled:Connect(function()
+            if State.AntiAFK then
+                VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                wait(1)
+                VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                Notify("Anti-AFK Triggered")
+            end
+        end)
+    end
+end)
+
+CreateClickButton("Clear Console", Page5, 185, 105, function()
+    LogService:ClearOutput()
+    Notify("Console Cleared")
+end)
+
+local AboutTitle = Instance.new("TextLabel", Page6)
+AboutTitle.BackgroundTransparency = 1; AboutTitle.Size = UDim2.new(1, 0, 0.3, 0); AboutTitle.Position = UDim2.new(0, 0, 0.1, 0)
+AboutTitle.Font = Enum.Font.FredokaOne; AboutTitle.Text = "QUWY"; AboutTitle.TextColor3 = Theme.Accent; AboutTitle.TextSize = 50
+
+local SubTitle = Instance.new("TextLabel", Page6)
+SubTitle.BackgroundTransparency = 1; SubTitle.Position = UDim2.new(0, 0, 0.4, 0); SubTitle.Size = UDim2.new(1, 0, 0, 20)
+SubTitle.Font = Enum.Font.Gotham; SubTitle.Text = "pls follow 😭"; SubTitle.TextColor3 = Theme.SubText; SubTitle.TextSize = 14
 
 local function CreateLinkBtn(text, url, yPos)
-    local Btn = Instance.new("TextButton", Page5)
-    Btn.BackgroundColor3 = Theme.Element
-    Btn.Position = UDim2.new(0.5, -100, 0.55, yPos)
-    Btn.Size = UDim2.new(0, 200, 0, 35)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Text = text
-    Btn.TextColor3 = Theme.Text
-    Btn.TextSize = 13
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 20)
-    Instance.new("UIStroke", Btn).Color = Theme.Accent
-    Instance.new("UIStroke", Btn).Thickness = 1
-    
-    Btn.MouseButton1Click:Connect(function()
-        if setclipboard then 
-            setclipboard(url)
-            Notify("Link Copied!") 
-        else 
-            Notify("No Copy Support :(") 
-        end
-    end)
+    local Btn = Instance.new("TextButton", Page6); Btn.BackgroundColor3 = Theme.Element; Btn.Position = UDim2.new(0.5, -100, 0.55, yPos); Btn.Size = UDim2.new(0, 200, 0, 35)
+    Btn.Font = Enum.Font.GothamBold; Btn.Text = text; Btn.TextColor3 = Theme.Text; Btn.TextSize = 13
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 20); Instance.new("UIStroke", Btn).Color = Theme.Accent; Instance.new("UIStroke", Btn).Thickness = 1
+    Btn.MouseButton1Click:Connect(function() if setclipboard then setclipboard(url); Notify("Link Copied!") else Notify("No Copy Support :(") end end)
 end
-
 CreateLinkBtn("Telegram: QLogovo", "https://t.me/QLogovo", 0)
 CreateLinkBtn("Discord Server", "https://discord.gg/9wCEUewSbN", 45)
 
@@ -477,7 +503,7 @@ local function CircleDragLogic()
     local dragging, dragStart, startPos
     Circle.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Circle.Position; CircleDragged = false end end)
     Circle.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-    UserInputService.InputChanged:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then local delta = input.Position - dragStart; if delta.Magnitude > 3 then CircleDragged = true end; TweenService:Create(Circle, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play() end end)
+    UserInputService.InputChanged:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then local delta = input.Position - dragStart; if delta.Magnitude > 3 then CircleDragged = true; TweenService:Create(Circle, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play() end end end)
 end
 CircleDragLogic()
 
